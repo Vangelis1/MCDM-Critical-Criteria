@@ -1,0 +1,345 @@
+
+
+
+***********************************************************************************************
+*                                                                                             *
+*  To run this model by using the BARON software, go to the follwing webpage and follow the   * 
+*  obvious instructions (i.e., enter the file name with this source code and an email address *
+*  to get the results back):                                                                  *
+*                                                                                             *
+*    https://neos-server.org/neos/solvers/go:BARON/GAMS.html                                  *
+*                                                                                             *
+***********************************************************************************************
+*											      *
+* This optimzation model is written for the presentation during ADA 2024 in Helsinki,         *
+* July 10-12, 2024.  It considers a Sensitivity Analysis approach when multiple criteria      *
+* weights can change simultaneously to achive a ranking change between two alternatives.      *
+* As data we used the data from the OSAKA study (by [Omasa, et al., 2004] under Panelist 1.   *
+* That reference is as follows:                                                               *
+*  			      							              *
+*    Omasa, T., Kishimoto, M., Kawase, M. and Yagi, K., 2004. An attempt at decision making   *
+*    in tissue engineering: reactor evaluation using the analytic hierarchy process (AHP).    *
+*    Biochemical Engineering Journal, 20(2-3), pp.173-179.                                    *
+*                                                                                             *
+* This code was written by Evangelos Triantaphyllou during January of 2024.  	              *
+* Today's date:  January 16, 2024.                                                            *
+*											      *
+***********************************************************************************************
+
+***********************************************************************************************
+*                                                                                             *
+* The MAIN GOAL of this program is to derive a ranking change between two alternatives with 
+* minimum criteria change (i.e., of multiple criteria). 
+*                                                                                             *
+***********************************************************************************************
+
+***********************************************************************************************
+* The following program is written in GAMS:						      *
+* GAMS = "G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m"		      *
+***********************************************************************************************
+
+***********************************************************************************************
+* If you use this software, please cite publications from				      *
+*  https://minlp.com/baron-publications, such as: 					      *
+*											      *
+* Khajavirad, A. and N. V. Sahinidis,							      *
+* A hybrid LP/NLP paradigm for global optimization relaxations,				      *
+* Mathematical Programming Computation, 10, 383-421, 2018.				      *
+***********************************************************************************************
+
+
+******************************************************** ;
+*** This is the section with the basic input values  *** ;
+*** That is, the A_i,j  and W_j  values when the     *** ;
+*** data from Panelist 1 are used!                   *** ;
+******************************************************** ;
+
+*** First we input the Criteria Weights (= W_k) ******** ;
+SCALAR W_1     the value is / 0.439 / ;
+SCALAR W_2     the value is / 0.043 / ;
+SCALAR W_3     the value is / 0.135 / ;
+SCALAR W_4     the value is / 0.118 / ;
+SCALAR W_5     the value is / 0.265 / ;  
+
+********************************************************* ;
+*** Now we input the A_ij data for the alternatives   *** ;
+********************************************************* ;
+
+*** This is the ORIGINAL Alternative A1 ***************** ;
+ SCALAR A_11     the value is / 0.037 / ;
+ SCALAR A_12     the value is / 0.047 / ;
+ SCALAR A_13     the value is / 0.041 / ;
+ SCALAR A_14     the value is / 0.247 / ;
+ SCALAR A_15     the value is / 0.113 / ;  
+
+
+*** This is the ORIGINAL Alternative A2 ***************** ;
+ SCALAR A_21     the value is / 0.364 / ;
+ SCALAR A_22     the value is / 0.207 / ;
+ SCALAR A_23     the value is / 0.086 / ;
+ SCALAR A_24     the value is / 0.107 / ;
+ SCALAR A_25     the value is / 0.102 / ;  
+
+*** This is the ORIGINAL Alternative A3 ***************** ;
+ SCALAR A_31     the value is / 0.075 / ;
+ SCALAR A_32     the value is / 0.391 / ;
+ SCALAR A_33     the value is / 0.409 / ;
+ SCALAR A_34     the value is / 0.140 / ;
+ SCALAR A_35     the value is / 0.326 / ;  
+
+*** This is the ORIGINAL Alternative A4 ****************** ;
+ SCALAR A_41     the value is / 0.122 / ;
+ SCALAR A_42     the value is / 0.080 / ;
+ SCALAR A_43     the value is / 0.132 / ;
+ SCALAR A_44     the value is / 0.303 / ;
+ SCALAR A_45     the value is / 0.074 / ;  
+
+*** This is the ORIGINAL Alternative A5 ***************** ;
+ SCALAR A_51     the value is / 0.201 / ;
+ SCALAR A_52     the value is / 0.115 / ;
+ SCALAR A_53     the value is / 0.120 / ;
+ SCALAR A_54     the value is / 0.091 / ;
+ SCALAR A_55     the value is / 0.149 / ;  
+
+*** This is the ORIGINAL Alternative A6 ***************** ;
+ SCALAR A_61     the value is / 0.201 / ;
+ SCALAR A_62     the value is / 0.160 / ;
+ SCALAR A_63     the value is / 0.212 / ;
+ SCALAR A_64     the value is / 0.112 / ;
+ SCALAR A_65     the value is / 0.237 / ;  
+
+********************************************************* ;
+* Next we compute the original total performance value  * ;
+* (= Pi) for each alternative.                          * ;
+********************************************************* ;
+* NOTE: This is not needed for teh optimization model.  * ;
+* We do it to confirm the data have been entered        * ;
+* correctly.                                            * ;
+********************************************************* ;
+
+******************************************* ;
+POSITIVE VARIABLES P1, P2, P3, P4, P5, P6   ;
+
+EQUATIONS EQ001, EQ002, EQ003, EQ004, EQ005, EQ006 ;
+
+EQ001..  P1 =e= A_11*W_1 + A_12*W_2 + A_13*W_3 + A_14*W_4 + A_15*W_5 ;
+EQ002..  P2 =e= A_21*W_1 + A_22*W_2 + A_23*W_3 + A_24*W_4 + A_25*W_5 ;
+EQ003..  P3 =e= A_31*W_1 + A_32*W_2 + A_33*W_3 + A_34*W_4 + A_35*W_5 ;
+EQ004..  P4 =e= A_41*W_1 + A_42*W_2 + A_43*W_3 + A_44*W_4 + A_45*W_5 ;
+EQ005..  P5 =e= A_51*W_1 + A_52*W_2 + A_53*W_3 + A_54*W_4 + A_55*W_5 ;
+EQ006..  P6 =e= A_61*W_1 + A_62*W_2 + A_63*W_3 + A_64*W_4 + A_65*W_5 ;
+
+
+********************************************************
+* The variabble Z is used for the Objective Function   *
+********************************************************
+* NOTE:  It should ->not<- be designated as Positive   *
+* (although it will always be positive by definition)  *
+* as otherwise an error message will result.           *
+********************************************************
+VARIABLES          Z ;
+
+
+********************************************************
+*** Next are the X_j vars.  That is, the adjustment    *
+*** coefficients for the 5 criteria weights.           *
+*** Therefore, we have N = 5 such variables.           *
+*** Depending on the particular formulation used, they *
+*** can be positive or of unassigned sign.             * 
+********************************************************
+VARIABLES X_1, X_2, X_3, X_4, X_5 ;  
+
+
+********************************************************
+*** The t_j variables are auxiliary. They are not      *
+*** mentioned in the paper.  They are used to make the *
+*** model fit easier on the screen of a PC.            *
+*** They are the squared differences of the            *
+*** adjustment coefficients from the perfect value     *
+*** of 1 (or 0, depending on which formulation is      *
+*** used.  That is, the following is true:	       *
+***       t_j = (1 - X_j)x(1 - X_j).                   *
+********************************************************
+
+***********************************************************************************
+* In other words, t_j is the SQUARED difference between the perfect value 1 and   *
+* the adjustment coefficient for weight W_j of criterion C_j.                     *
+***********************************************************************************
+POSITIVE VARIABLES t_1, t_2, t_3, t_4, t_5 ;   
+
+
+*****************************************************************************
+*** Next are the constraint (equations) names for the squared differences.  *
+*****************************************************************************
+
+EQUATIONS e01_1, e01_2, e01_3, e01_4, e01_5 ;  
+
+
+****************************************************************************************
+*** The following constraints (equations) define the indivudual squared differences    *
+*** to be used in the Objective Function.                                              *
+**************************************************************************************** 
+
+e01_1.. t_1 =e= (1 - X_1) * (1 - X_1) ;
+e01_2.. t_2 =e= (1 - X_2) * (1 - X_2) ;
+e01_3.. t_3 =e= (1 - X_3) * (1 - X_3) ;
+e01_4.. t_4 =e= (1 - X_4) * (1 - X_4) ;
+e01_5.. t_5 =e= (1 - X_5) * (1 - X_5) ;
+
+*************************************************************************** ;
+
+POSITIVE VARIABLES tt ;
+EQUATIONS Equation1   ;
+*********************************************************************************** ;
+* <tt> is the sum of all the squared differences of the adjustment coefficients!  * ;
+* It can be the value of the Onjective Function also given as <Z>                 * ;
+*********************************************************************************** ;
+
+************************************************************************************** ;
+* NOTE #1 is as follows:                                                             * ;
+* ~~~~~~~~~~~~~~~~~~~~~~                                                             * ;
+* With the following constraint we want the objective function to be the sum of the  * ;
+* squared (1 - values X_j) to be minimized.  The perfect value for Z is equal to 0   * ; 
+* when all of them are equal to 1.  In this case the adjusted weights WW_j should be * ;
+* defined as follows:                                                                * ;
+*               WW_j = W_j * (X_j)                                                   * ;
+* That is, we want the adjustment coefficients X_j to be as close to >1< as possible.* ;
+************************************************************************************** ;
+
+ Equation1.. tt =e= t_1 + t_2 + t_3 + t_4 + t_5 ; 
+
+
+
+************************************************************************************** ;
+* NOTE #2 is as follows:                                                             * ;
+* ~~~~~~~~~~~~~~~~~~~~~~                                                             * ;
+* With the following constraint we want the objective function to be the sum of the  * ;
+* squared values X_j to be minimized.  The perfect value for Z is equal to 0 when    * ;
+* all of them are equal to 0.  In this case the adjusted weights WW_j should be      * ;
+* defined as follows:                                                                * ;
+*               WW_j = W_j * (1 - X_j)                                               * ;
+* That is, we want the adjustment coefficients X_j to be as close to >0< as possible.* ;
+************************************************************************************** ;
+
+* Equation1.. tt =e= (X_1)*(X_1) + (X_2)*(X_2) + (X_3)*(X_3) + (X_4)*(X_4) + (X_5)*(X_5) ;  
+
+
+
+
+**************************************************************
+*** Next is the definition of the actual Objective Function. * 
+**************************************************************
+EQUATIONS Objective_Function1 ;
+
+Objective_Function1.. Z =e= tt ;
+
+
+*******************************************************************
+* Determine the 5 adjusted (= new) criteria weights (= WW_j) now. *
+*******************************************************************
+
+POSITIVE VARIABLES WW_1, WW_2, WW_3, WW_4, WW_5 ;
+
+EQUATIONS EQweight1, EQweight2, EQweight3, EQweight4, EQweight5  ;
+
+
+***************************************************************** ;
+* The folwoing are two sets of similar constraints (equations). * ; 
+* Only one set of these two sets should be active at any time.  * ;
+* They ALWAYS produce identical results.                        * ;  
+* This is because the only difference is a simple linear        * ;
+* transformation of the type:                                   * ;
+*                      X_j <--- 1 - X_j                         * ; 
+***************************************************************** ;
+
+************************************* ;
+*** Set of constraints (I)          * ;
+************************************* ;
+****************************************************************** ;
+*** If we use these constraints, the objective function must be  * ;
+*** the minimization of the squared X_j values.                  * ;
+*** See NOTE #2 above too.                                       * ;
+****************************************************************** ;
+
+* EQweight1.. WW_1 =e= W_1 * (1 - X_1) ;
+* EQweight2.. WW_2 =e= W_2 * (1 - X_2) ;
+* EQweight3.. WW_3 =e= W_3 * (1 - X_3) ;
+* EQweight4.. WW_4 =e= W_4 * (1 - X_4) ;
+* EQweight5.. WW_5 =e= W_5 * (1 - X_5) ;
+
+********************************************************* ;
+*** I commented out the follwoing statements.           * ;
+*** They can be reactivated any time, but the previous  * ;
+*** bunch of statements must be commented out.          * ;
+********************************************************* ;
+
+************************************* ;
+*** Set of constraints (II)         * ;
+************************************* ;
+****************************************************************** ;
+*** If we use these constraints, the objective function must be  * ;
+*** the minimization of the squared differences (1- X_j values.  * ;
+*** See NOTE #1 above too.                                       * ;
+****************************************************************** ;
+
+ EQweight1.. WW_1 =e= W_1 * (X_1) ;
+ EQweight2.. WW_2 =e= W_2 * (X_2) ;
+ EQweight3.. WW_3 =e= W_3 * (X_3) ;
+ EQweight4.. WW_4 =e= W_4 * (X_4) ;
+ EQweight5.. WW_5 =e= W_5 * (X_5) ;
+
+
+*********************************************************************
+* The adjusted criteria weights must be normalized to add up to 1.  *
+*********************************************************************
+EQUATIONS Equation2 ;
+
+Equation2.. 1 =e= WW_1 + WW_2 + WW_3 + WW_4 + WW_5 ;
+
+
+*********************************************************************************
+* Determine the 6 adjusted (= new) total performance values for the 6 Alts now. *
+*********************************************************************************
+
+POSITIVE VARIABLES PP_1, PP_2, PP_3, PP_4, PP_5, PP_6 ;
+
+EQUATIONS EQ_PP1, EQ_PP2, EQ_PP3, EQ_PP4, EQ_PP5, EQ_PP6  ;
+
+EQ_PP1.. PP_1 =e= A_11*WW_1 + A_12*WW_2 + A_13*WW_3 + A_14*WW_4 + A_15*WW_5 ;
+EQ_PP2.. PP_2 =e= A_21*WW_1 + A_22*WW_2 + A_23*WW_3 + A_24*WW_4 + A_25*WW_5 ;
+EQ_PP3.. PP_3 =e= A_31*WW_1 + A_32*WW_2 + A_33*WW_3 + A_34*WW_4 + A_35*WW_5 ;
+EQ_PP4.. PP_4 =e= A_41*WW_1 + A_42*WW_2 + A_43*WW_3 + A_44*WW_4 + A_45*WW_5 ;
+EQ_PP5.. PP_5 =e= A_51*WW_1 + A_52*WW_2 + A_53*WW_3 + A_54*WW_4 + A_55*WW_5 ;
+EQ_PP6.. PP_6 =e= A_61*WW_1 + A_62*WW_2 + A_63*WW_3 + A_64*WW_4 + A_65*WW_5 ;
+
+
+
+************************************************************** ;
+*** Next is the definition of the constraint (= equation)    * ;
+*** that imposes two alternatives to be of identical rank.   * ;
+*** In a similar manner other pairwise requirements can be   * ;
+*** imposed too (one at a time).                             * ;
+************************************************************** '
+
+EQUATIONS Equation01 ;
+
+
+****************************************** ;
+*** This is for alternatives A3 and A5 *** ;
+****************************************** ;
+
+Equation01.. PP_3 =e= PP_5 ;
+
+
+***************************************************************************** '
+* Now we call the particular solver to solve this optimziation problem.     * ;
+***************************************************************************** ; 
+
+Model Optimization_Approach_to_Sensitivity_Analysis_Model_A1 / all /;
+
+Solve Optimization_Approach_to_Sensitivity_Analysis_Model_A1 using NLP minimizing Z;
+
+***************************************************************************** ;
+* This is the end of the GAMS code                                          * ;
+***************************************************************************** ;
+
